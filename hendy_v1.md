@@ -1,8 +1,10 @@
 Hendy Test - R Notebook
 ================
 
-This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you
-execute code within the notebook, the results appear beneath the code.
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. If you
+download it, open it in RStdudio and execute code within the notebook,
+the results appear beneath the code (they should match the results on
+this page).
 
 Some basic information will appear when you create a new R Notebook in
 the RStudio IDE (like the bit just above). I’ve left those in, and added
@@ -195,13 +197,14 @@ ggplot(data=dat)+geom_histogram(aes(x=d13C),bins = 50) #histogram of C
 ggplot(data=dat)+geom_histogram(aes(x=d18O), bins = 50) #histogram of O
 ```
 
-![](hendy_v1_files/figure-gfm/unnamed-chunk-3-3.png)<!-- --> Breaking
-the time series down into time intervals can be done using higher level
-(more developed) functions in R. This is effectively the same process as
-‘binning’ data, as you would in making a histogram. R has a function
-called ‘cut’ that does it automatically, or using custom interval breaks
-and names. I’m doing this ahead of time to save us from repeating code
-below, you’ll see why in a second.
+![](hendy_v1_files/figure-gfm/unnamed-chunk-3-3.png)<!-- -->
+
+Breaking the time series down into time intervals can be done using
+higher level (more developed) functions in R. This is effectively the
+same process as ‘binning’ data, as you would in making a histogram. R
+has a function called ‘cut’ that does it automatically, or using custom
+interval breaks and names. I’m doing this ahead of time to save us from
+repeating code below, you’ll see why in a second.
 
 ``` r
 #Define time intervals, and names. I'm taking a slightly different approach here.
@@ -415,3 +418,9 @@ ggplot()+geom_histogram(data=z_dat_long, aes(x=signature, color=isotope))+
 ![](hendy_v1_files/figure-gfm/unnamed-chunk-9-2.png)<!-- -->
 
 Now to do it again but for each interval separately
+
+``` r
+print("i'm empty :(")
+```
+
+    ## [1] "i'm empty :("
