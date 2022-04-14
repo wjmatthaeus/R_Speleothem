@@ -106,7 +106,7 @@ library(tidymodels)
     ## x dplyr::lag()      masks stats::lag()
     ## x yardstick::spec() masks readr::spec()
     ## x recipes::step()   masks stats::step()
-    ## • Use tidymodels_prefer() to resolve common conflicts.
+    ## • Search for functions across packages at https://www.tidymodels.org/find/
 
 ``` r
 #Read in data from delimited text file (i.e., csv)
