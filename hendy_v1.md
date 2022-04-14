@@ -106,7 +106,7 @@ library(tidymodels)
     ## x dplyr::lag()      masks stats::lag()
     ## x yardstick::spec() masks readr::spec()
     ## x recipes::step()   masks stats::step()
-    ## • Search for functions across packages at https://www.tidymodels.org/find/
+    ## • Use suppressPackageStartupMessages() to eliminate package startup messages
 
 ``` r
 #Read in data from delimited text file (i.e., csv)
