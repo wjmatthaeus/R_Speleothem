@@ -12,14 +12,14 @@ some of my own, including the comments from the raw R script.
 
 Background: Like the python notebook, the R Notebook provides an
 interactive view of your code, while also allowing you to easily publish
-a report from it (basic instructions further below). I’ve also provided
-the raw R Script (ending in .R), if you run the script directly in
-RStudio, the output will appear in the ‘console’ and ‘plots’ windows.
+a report from it. I’ve also provided the raw R Script (ending in .R), if
+you run the script directly in RStudio, the output will appear in the
+‘console’ and ‘plots’ windows.
 
 The command ‘setwd’ tells R where to look for files. You could
 alternatively just give R the full path for the file you want to import.
-You’ll need to replace the XXXX with the directory where your data file
-is stored.
+You’ll need to replace the ‘\~/Dropbox/R\_on\_git/R\_Speleothem’, below,
+with the directory where your data file is stored.
 
 You’ll have noticed already there are differences in the R command names
 the standards for setting up the R environment (i.e., importing
@@ -31,10 +31,10 @@ libraries that are very useful for data import, manipulation, export,
 plotting and and other things (<https://www.tidyverse.org/>).
 
 Try executing this chunk. If you’re using the .RMD file in RStudio, by
-clicking the *Run* button diowithin the chunk or by placing your cursor
-inside it and pressing *Cmd+Shift+Enter*. You can also copy/paste the
-chunk into the console or run this section of in script by highlighting
-it and pressing *Cmd+Shift+Enter*.
+clicking the *Run* button in the top right hand corner of the chung, or
+by placing your cursor inside the chunk and pressing *Cmd+Shift+Enter*.
+You can also copy/paste the chunk into the console or run this section
+of in script by highlighting it and pressing *Cmd+Shift+Enter*.
 
 ``` r
 # Script originally written by Barbara Wortham (unkown date)
@@ -54,10 +54,14 @@ it and pressing *Cmd+Shift+Enter*.
 #and the IDE will try to autocomplete functions, paths and variables when you start typing their names.
 #place your cursor next to 'setwd' and press F1. look in the bottom right window of the IDE
 #the 'help' tab has opened, giving you infomration on the command
+
 setwd("~/Dropbox/R_on_git/R_Speleothem")
+
 #setwd("XXXX")#you will have to replace XXXX with the path to your file. try out autocomplete here. 
 #start typing the name of the folder, press Tab, and the IDE will show you some options in a dropdown.
-#install.packages("tidyverse") #highlight this command and run it if the next one tells you the package is not installed
+#highlight the 'install.packages' commands (without the #) and run them if the next one tells you the package is not installed
+
+#install.packages("tidyverse") 
 library(tidyverse)
 ```
 
@@ -115,6 +119,7 @@ library(tidymodels)
 
 ``` r
 #Read in data from delimited text file (i.e., csv)
+
 dat<-read_csv("stable.csv") #read csv to tbl, also notice the assignment operator
 ```
 
@@ -238,6 +243,7 @@ and pivot\_wider
 ``` r
 #Create and save figures of time series
 #first 'lengthen' data
+
 colnames(dat) #remind ourselves of the names so we can copy paste, and avoid errors
 ```
 
@@ -376,6 +382,7 @@ t0 <- max(dat$age)
 dat$ky_t0<-dat$age-t0 #calculate a new time variable, thousands of years from start
 
 p_d18O <- lm(data = dat, formula = d18O ~ ky_t0)   #fit linear model
+
 #use 'augment' from package 'broom' to look at model fit to calculate fit values automatically
 #which are stored in the new column .fitted by default
 dat$fitted_d18O<-augment(p_d18O)$.fitted
@@ -392,6 +399,12 @@ dat$notrend_d13C<-dat$d13C-dat$fitted_d13C
 sd_d13C<-sd(dat$notrend_d13C)
 dat$z_d13C<-dat$notrend_d13C/sd_d13C
 ```
+
+It’s worth mentioning that these are not ‘vanilla’ z-scores, as they are
+also de-trended. I will refer to them as such because they share the two
+most important properties of z-scores: they are centered and
+standardized. That is, the mean of the de-trended z-scores is zero, and
+they are in the unit of standard deviations.
 
 Let’s see if it made a difference by plotting the z-scores as a time
 series and histograms.
@@ -421,7 +434,9 @@ ggplot()+geom_histogram(data=z_dat_long, aes(x=signature, color=isotope))+
 
 ![](hendy_v1_files/figure-gfm/unnamed-chunk-9-2.png)<!-- -->
 
-Now to do it again but for each interval separately
+Now to do it again but for each interval separately (This script is
+unfinished, if you are interested in seeing the rest of this analysis in
+R please let me know)
 
 ``` r
 print("i'm empty :(")

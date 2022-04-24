@@ -9,14 +9,14 @@ This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. If you download 
 Some basic information will appear when you create a new R Notebook in the RStudio IDE (like the bit just above). I've left those in, and added some of my own, including the comments from the raw R script. 
 
 Background:
-Like the python notebook, the R Notebook provides an interactive view of your code, while also allowing you to easily publish a report from it (basic instructions further below). I've also provided the raw R Script (ending in .R), if you run the script directly in RStudio, the output will appear in the 'console' and 'plots' windows.
+Like the python notebook, the R Notebook provides an interactive view of your code, while also allowing you to easily publish a report from it. I've also provided the raw R Script (ending in .R), if you run the script directly in RStudio, the output will appear in the 'console' and 'plots' windows.
 
-The command 'setwd' tells R where to look for files. You could alternatively just give R the full path for the file you want to import. You'll need to replace the XXXX with the directory where your data file is stored.
+The command 'setwd' tells R where to look for files. You could alternatively just give R the full path for the file you want to import. You'll need to replace the '~/Dropbox/R_on_git/R_Speleothem', below, with the directory where your data file is stored.
 
 You'll have noticed already there are differences in the R command names the standards for setting up the R environment (i.e., importing packages). I've commented out the 'install.packages' line above, but you can highlight that code and press 'command+enter' to run just the highlighted code. You'll only need to do this if the 'library' command says the package is not installed. Tidyverse is a collection of libraries that are very useful for data import, manipulation, export, plotting and and other things (https://www.tidyverse.org/).
 
 Try executing this chunk.
-If you're using the .RMD file in RStudio, by clicking the *Run* button diowithin the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+If you're using the .RMD file in RStudio, by clicking the *Run* button in the top right hand corner of the chung, or by placing your cursor inside the chunk and pressing *Cmd+Shift+Enter*. 
 You can also copy/paste the chunk into the console or run this section of in script by highlighting it and pressing *Cmd+Shift+Enter*.
 
 
@@ -39,11 +39,16 @@ You can also copy/paste the chunk into the console or run this section of in scr
 #and the IDE will try to autocomplete functions, paths and variables when you start typing their names.
 #place your cursor next to 'setwd' and press F1. look in the bottom right window of the IDE
 #the 'help' tab has opened, giving you infomration on the command
+
 setwd("~/Dropbox/R_on_git/R_Speleothem")
+
 #setwd("XXXX")#you will have to replace XXXX with the path to your file. try out autocomplete here. 
 #start typing the name of the folder, press Tab, and the IDE will show you some options in a dropdown.
-#install.packages("tidyverse") #highlight this command and run it if the next one tells you the package is not installed
+#highlight the 'install.packages' commands (without the #) and run them if the next one tells you the package is not installed
+
+#install.packages("tidyverse") 
 library(tidyverse)
+
 #install.packages("tidymodels")
 library(tidymodels)
 ```
@@ -52,8 +57,11 @@ library(tidymodels)
 
 ```{r}
 #Read in data from delimited text file (i.e., csv)
+
 dat<-read_csv("stable.csv") #read csv to tbl, also notice the assignment operator
+
 mode(dat$age)#already in numeric vectors, notice column reference syntax
+
 #Basic QC
 unique(is.na(dat)) #check each column for missing values
 print(dat) #print a preview of the tbl (behaves differently from print for dataframes)
@@ -111,7 +119,9 @@ Note that there are plotting functions that come with base R (i.e., not ggplot2)
 ```{r}
 #Create and save figures of time series
 #first 'lengthen' data
+
 colnames(dat) #remind ourselves of the names so we can copy paste, and avoid errors
+
 #Note i'm splitting this command onto multiple lines to improve readability, in R you can just split up 
 #comma separated inputs (i.e., function(,,,,)) in this way.
 dat_long <- pivot_longer(data=dat, 
@@ -133,6 +143,7 @@ ggplot(data = dat_long)+geom_line(aes(x=age, y=signature, color=isotope))+
   #you can also break up commands connected by '+' operators onto separate lines 
   facet_grid(isotope~.,scales = "free_y")+
   theme_minimal()
+
 #the 'ggplot' command sends output to the screen and not to a file, unless the output
 #is saved (see below).
 ```
@@ -214,6 +225,7 @@ t0 <- max(dat$age)
 dat$ky_t0<-dat$age-t0 #calculate a new time variable, thousands of years from start
 
 p_d18O <- lm(data = dat, formula = d18O ~ ky_t0)   #fit linear model
+
 #use 'augment' from package 'broom' to look at model fit to calculate fit values automatically
 #which are stored in the new column .fitted by default
 dat$fitted_d18O<-augment(p_d18O)$.fitted
@@ -232,6 +244,7 @@ dat$z_d13C<-dat$notrend_d13C/sd_d13C
 ```
 
 
+It's worth mentioning that these are not 'vanilla' z-scores, as they are also de-trended. I will refer to them as such because they share the two most important properties of z-scores: they are centered and standardized. That is, the mean of the de-trended z-scores is zero, and they are in the unit of standard deviations.
 
 Let's see if it made a difference by plotting the z-scores as a time series and histograms.
 
@@ -256,7 +269,7 @@ ggplot()+geom_histogram(data=z_dat_long, aes(x=signature, color=isotope))+
 
 
 Now to do it again but for each interval separately
-
+(This script is unfinished, if you are interested in seeing the rest of this analysis in R please let me know)
 
 
 ```{r}
