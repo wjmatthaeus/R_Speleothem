@@ -30,8 +30,11 @@ says the package is not installed. Tidyverse is a collection of
 libraries that are very useful for data import, manipulation, export,
 plotting and and other things (<https://www.tidyverse.org/>).
 
-Try executing this chunk by clicking the *Run* button within the chunk
-or by placing your cursor inside it and pressing *Cmd+Shift+Enter*.
+Try executing this chunk. If you’re using the .RMD file in RStudio, by
+clicking the *Run* button diowithin the chunk or by placing your cursor
+inside it and pressing *Cmd+Shift+Enter*. You can also copy/paste the
+chunk into the console or run this section of in script by highlighting
+it and pressing *Cmd+Shift+Enter*.
 
 ``` r
 # Script originally written by Barbara Wortham (unkown date)
@@ -108,7 +111,7 @@ library(tidymodels)
     ## x dplyr::lag()      masks stats::lag()
     ## x yardstick::spec() masks readr::spec()
     ## x recipes::step()   masks stats::step()
-    ## • Use suppressPackageStartupMessages() to eliminate package startup messages
+    ## • Search for functions across packages at https://www.tidymodels.org/find/
 
 ``` r
 #Read in data from delimited text file (i.e., csv)
@@ -272,7 +275,8 @@ dat_long#take a look
 
 ``` r
 #We can use the new variable 'isotope' in 'dat_long' to automatically group observations by isotope type
-#an overview of ggplot2 usage can be found here, (https://github.com/rstudio/cheatsheets/blob/main/data-visualization-2.1.pdf)
+#an overview of ggplot2 usage can be found here, #(https://github.com/rstudio/cheatsheets/blob/main/data-visualization-2.1.pdf)
+#also (https://cran.r-project.org/web/packages/egg/vignettes/Ecosystem.html)
 #ggplot is a very useful tool for data visualization, and some analyses
 
 ggplot(data = dat_long)+geom_line(aes(x=age, y=signature, color=isotope))+ 
