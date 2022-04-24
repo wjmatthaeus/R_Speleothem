@@ -1,0 +1,106 @@
+---
+title: "Fire Sensitive Speleothem"
+output: html_notebook
+---
+
+Following article "Past fires and post-fire impacts reconstructed from a southwest Australian stalagmite" ~ L.K. McDonough et al. 2022.
+
+Start by loading packages and importing data (excel downloaded from https://www.sciencedirect.com/science/article/abs/pii/S0016703722001454)
+Method 1) Using Excel, save data as .csv. Remove everything except column headers and data (*Note). Read as with previous data, using read_csv
+Method 2) Showcased here. Tidyverse readexcel package is new to us.
+
+```{r}
+setwd("~/Dropbox/R_on_git/R_Speleothem")
+library(tidyverse)
+library(tidymodels)
+#install.packages("readxl")
+library(readxl)
+#import
+hi_res <- read_excel(path = "1-s2.0-S0016703722001454-mmc1.xlsx",sheet =1 )
+#take a look
+hi_res
+```
+So far looks good. Now for some QC.
+
+
+```{r}
+colnames(hi_res) #drop 17 and 18
+hi_res <- hi_res %>% select(-(c(17,18)))
+colnames(hi_res)
+hi_res<-rename(hi_res, d18O="\u03b418O (\u2030)")
+hi_res<-rename(hi_res, d13C="\u03b413C (\u2030)")
+colnames(hi_res)
+#"Al (ppm)","Ba (ppm)", "Br (ppm) smoothed using 13 point Savitsky Golay filter","Cu (ppm)",
+ # "d13C","d18O", "Mg (ppm)","Organic matter (relative greyscale concentration)",
+ # "P (ppm)","Pb (ppm)", "S (relative greyscale concentration)","Sr (ppm)",
+ # "U (ppm)","Zn (ppm)"                   
+```
+
+Data structure (i.e., the tibble) is looking clean. Let's do some EDA (exploratory data analysis)
+
+```{r}
+summary(hi_res)
+#drop columns not used in rolling average plot, and lengthen data
+hi_res_long <-  hi_res %>% select(!c("Al (ppm)", "Pb (ppm)", "Cu (ppm)","Zn (ppm)"))%>%
+  pivot_longer(!c("DFT (mm)","Year (CE)"),names_to = "Type",values_to = "Observation") %>% group_by(Type)
+
+#make the new Type variable a factor (categorical) variable, and tell R what the order should be
+hi_res_long$Type <- as.ordered(hi_res_long$Type)
+levels(hi_res_long$Type)<- c("d13C","d18O",
+ "Mg (ppm)","Organic matter (relative greyscale concentration)",
+  "P (ppm)","S (relative greyscale concentration)",                           
+ "Sr (ppm)","Ba (ppm)",
+  "U (ppm)","Br (ppm) smoothed using 13 point Savitsky Golay filter")
+
+
+
+#histograms of all variables
+ggplot(data = hi_res_long)+geom_histogram(aes(x=Observation))+facet_wrap(Type~.,scales = "free")
+
+#pairwise correlations
+```
+
+
+```{r}
+#time series of all variables, 
+#alternative, simpler picture for first glance: geom_smooth uses gams with a basis of penalized cubic regression splines
+ggplot(data = hi_res_long)+geom_smooth(aes(x=`Year (CE)`, y=Observation))+theme_minimal()+facet_wrap(Type~.,scales = "free")
+#following the paper, overlay raw data (geom_lines)
+#with 5-year moving average (geom_ma)
+#we could define a function to calculate moving average like this
+# ma <- function(x, n = 5){stats::filter(x, base::rep(1 / n, n), sides = 2)}
+#but that would be based in indices and won't account for irregular time intervals
+#if i'm just looking at a single variable R base plot and hist works fine
+#shows time is not regular
+plot(hi_res$`Year (CE)`)
+hist(hi_res$`Year (CE)`)
+#if you want to know what the time steps are...
+hi_res$delTime<-NA
+hi_res$delTime[1]<-0
+for(i in 2:length(hi_res)){
+  # print(i)#reporter
+  hi_res$delTime[i]<-hi_res$`Year (CE)`[i]-hi_res$`Year (CE)`[i-1]
+}
+plot(hi_res$delTime[2:length(hi_res$delTime)])
+hist(hi_res$delTime[2:length(hi_res$delTime)],breaks = 100)
+
+#R package for irregular time series? sure...
+install.packages('zoo')
+library(zoo)
+is.regular(hi_res$`DFT (mm)`)
+aggregate(zoo(hi_res$`DFT (mm)`))
+rollmean()
+ggplot(data = hi_res_long)+geom_line(aes(x=`Year (CE)`, y=Observation, color = Type))+
+  geom_line(aes(x=`Year (CE)`, y=rollmean(Observation, 100, fill=NA), color =Type))+
+  theme_minimal()+facet_wrap(Type~.,scales = "free",ncol = 2)+
+    theme(axis.text.x = element_text(angle=45), legend.position = 'none')
+p<-
+  ggsave("rawFireSpeleothem.png", plot = p, device = "png", 
+       scale = 1, height = 8.5, width = 11, units = c("in"),
+       dpi = 300, limitsize = TRUE)
+#d18O and d13C scatterplot. nonequillibrium processes at play?
+ggplot(data = hi_res)+geom_point(aes(x=d18O, y=d13C))+theme_minimal()
+
+
+```
+

@@ -1,0 +1,138 @@
+---
+title: "Fire Sensitive Speleothem"
+output: html_notebook
+---
+
+Following article "Past fires and post-fire impacts reconstructed from a southwest Australian stalagmite" ~ L.K. McDonough et al. 2022.
+
+Start by loading packages and importing data (excel downloaded from https://www.sciencedirect.com/science/article/abs/pii/S0016703722001454)
+Method 1) Using Excel, save data as .csv. Remove everything except column headers and data (*Note). Read as with previous data, using read_csv
+Method 2) Showcased here. Tidyverse readexcel package is new to us.
+
+```{r}
+setwd("~/Dropbox/R_on_git/R_Speleothem")
+library(tidyverse)
+library(tidymodels)
+#install.packages("readxl")
+library(readxl)
+# install.packages('zoo')
+library(zoo)
+# install.packages("FactoMineR")
+# install.packages("factoextra")
+library(FactoMineR)
+library(factoextra)
+#import
+hi_res <- read_excel(path = "1-s2.0-S0016703722001454-mmc1.xlsx",sheet =1 )
+#take a look
+hi_res
+```
+So far looks good. Now for some QC.
+
+
+```{r}
+colnames(hi_res) #drop 17 and 18
+hi_res <- hi_res %>% select(-(c(17,18)))
+colnames(hi_res)
+hi_res<-rename(hi_res, d18O="\u03b418O (\u2030)")
+hi_res<-rename(hi_res, d13C="\u03b413C (\u2030)")
+colnames(hi_res)
+#"Al (ppm)","Ba (ppm)", "Br (ppm) smoothed using 13 point Savitsky Golay filter","Cu (ppm)",
+ # "d13C","d18O", "Mg (ppm)","Organic matter (relative greyscale concentration)",
+ # "P (ppm)","Pb (ppm)", "S (relative greyscale concentration)","Sr (ppm)",
+ # "U (ppm)","Zn (ppm)"                   
+```
+
+Data structure (i.e., the tibble) is looking clean. Let's do some EDA (exploratory data analysis)
+
+```{r}
+summary(hi_res)
+#drop columns not used in rolling average plot, and lengthen data
+hi_res_long <-  hi_res %>% select(!c("Al (ppm)", "Pb (ppm)", "Cu (ppm)","Zn (ppm)"))%>%
+  pivot_longer(!c("DFT (mm)","Year (CE)"),names_to = "Type",values_to = "Observation") %>% group_by(Type)
+
+#make the new Type variable a factor (categorical) variable, and tell R what the order should be
+hi_res_long$Type <- factor(hi_res_long$Type, 
+  levels = c("d13C","d18O",
+ "Mg (ppm)","Organic matter (relative greyscale concentration)",
+  "P (ppm)","S (relative greyscale concentration)",                           
+ "Sr (ppm)","Ba (ppm)",
+  "U (ppm)","Br (ppm) smoothed using 13 point Savitsky Golay filter"))
+
+#this is the base R plotting function, fine for single variables
+plot(hi_res$`Year (CE)`)
+
+#histograms of all variables
+ggplot(data = hi_res_long)+geom_histogram(aes(x=Observation))+facet_wrap(Type~.,scales = "free")
+
+#d18O and d13C scatterplot. nonequillibrium processes at play?
+ggplot(data = hi_res)+geom_point(aes(x=d18O, y=d13C))+theme_minimal()
+
+#pairwise correlations?
+```
+
+
+```{r}
+#time series of all variables, 
+#alternative, simpler picture for first glance: geom_smooth uses gams with a basis of penalized cubic regression splines
+ggplot(data = hi_res_long)+geom_smooth(aes(x=`Year (CE)`, y=Observation))+theme_minimal()+facet_wrap(Type~.,scales = "free")
+
+#following the paper, overlay raw data (geom_lines)
+#with 5-year moving average (geom_ma)
+
+#i'll use the rollmean function from the zoo package
+#alternatively, using stats from base R we could define a function to calculate moving average like this
+# ma <- function(x, n = 5){stats::filter(x, base::rep(1 / n, n), sides = 2)}
+#where n is the window size, and sides = 2 produces a centered rolling mean
+#first check to see if the time intervals are regular (from looking at the plot of time)
+plot(hi_res$d13C)
+plot(zoo::rollmean(hi_res$d13C,k = 100,fill = NA))
+plot(zoo::rollmean(zoo(x=hi_res$d13C,order.by = hi_res$`Year (CE)`),k = 100,fill = NA))
+
+is.regular(zoo(x=hi_res$`Organic matter (relative greyscale concentration)`,order.by = hi_res$`Year (CE)`))
+is.regular(zoo(x=hi_res$d13C,order.by = hi_res$`Year (CE)`))
+
+#three nested functions to be applied groupwise below 
+#read from inside out: store as zoo datatype, calculate rolling mean, then store as numeric vector
+my_rollmean <- function(x, na.rm=FALSE)(as.numeric(rollmean(zoo(x,order.by = hi_res$`Year (CE)`), k=100, fill = NA)))
+#calculate group means for each non-index column, then store like '_long' above
+hi_res_means <- hi_res %>% mutate_at(vars(-'DFT (mm)', -'Year (CE)'), my_rollmean)%>%  
+  select(!c("Al (ppm)", "Pb (ppm)", "Cu (ppm)","Zn (ppm)"))%>% 
+  pivot_longer(!c("DFT (mm)","Year (CE)"),names_to = "Type",values_to = "Observation") %>% group_by(Type)
+#
+hi_res_means$Type <- factor(hi_res_means$Type, 
+  levels = c("d13C","d18O",
+ "Mg (ppm)","Organic matter (relative greyscale concentration)",
+  "P (ppm)","S (relative greyscale concentration)",                           
+ "Sr (ppm)","Ba (ppm)",
+  "U (ppm)","Br (ppm) smoothed using 13 point Savitsky Golay filter"))
+
+p<-ggplot()+
+  #new technique here, separate but same-shaped datasets being passed to data in separate geoms
+    geom_line(data = hi_res_long,aes(x=`Year (CE)`, y=Observation, color = Type))+
+    geom_line(data = hi_res_means,aes(x=`Year (CE)`, y=Observation),color='black', linetype='dashed')+
+    theme_minimal()+facet_wrap(Type~.,scales = "free",ncol = 2)+
+    theme(legend.position = 'none')
+p
+#why the warning, how would we trace back the problem?
+#also not so good to look at, lets save and view separately
+ggsave("raw_plus_rollmean_FireSpeleothem.png", plot = p, device = "png", 
+       scale = 1, height = 8.5, width = 11, units = c("in"),
+       dpi = 300, limitsize = TRUE)
+
+
+
+```
+```{r}
+x<-subset(hi_res, select=-c(`DFT (mm)`,`Year (CE)`))
+unit<-PCA(X = x, scale.unit = TRUE)
+var<-PCA(X = x, scale.unit = FALSE)
+fviz_pca(unit)
+fviz_pca_biplot(unit)
+fviz_pca_var(unit)
+
+plot(1:length(unit$ind$contrib[,1]),unit$ind$coord[,1])
+plot(1:length(unit$ind$contrib[,2]),unit$ind$coord[,2])
+plot(1:length(unit$ind$contrib[,3]),unit$ind$coord[,3])
+
+```
+
