@@ -15,7 +15,9 @@ The command 'setwd' tells R where to look for files. You could alternatively jus
 
 You'll have noticed already there are differences in the R command names the standards for setting up the R environment (i.e., importing packages). I've commented out the 'install.packages' line above, but you can highlight that code and press 'command+enter' to run just the highlighted code. You'll only need to do this if the 'library' command says the package is not installed. Tidyverse is a collection of libraries that are very useful for data import, manipulation, export, plotting and and other things (https://www.tidyverse.org/).
 
-Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+Try executing this chunk.
+If you're using the .RMD file in RStudio, by clicking the *Run* button diowithin the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+You can also copy/paste the chunk into the console or run this section of in script by highlighting it and pressing *Cmd+Shift+Enter*.
 
 
 
