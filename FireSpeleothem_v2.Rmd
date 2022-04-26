@@ -1,65 +1,100 @@
 ---
-title: "Fire Sensitive Speleothem"
-output: html_notebook
+title: "Coding Demo Day 2 - Following L.K. McDonough et al. 2022 Past fires and post-fire impacts reconstructed [from] stalagmite  - R Notebook"
+output: github_document
+editor_options:
+  chunk_output_type: inline
 ---
+Following article "Past fires and post-fire impacts reconstructed from a southwest Australian stalagmite" ~ L.K. McDonough et al. 2022. (https://doi-org.ezproxy.baylor.edu/10.1016/j.gca.2022.03.020)
 
-Following article "Past fires and post-fire impacts reconstructed from a southwest Australian stalagmite" ~ L.K. McDonough et al. 2022.
+A note on coding style. I'm showcasing 'high-level' scripting here, not in the quality sense, but in the development sense.For language like R, Python and Matlab it is often more time (cpu cycles) and space (memory) efficient to use vectorized or recursive operations than loops. It is expected that the developers have worked this out. For that reason, my M.O. in coding this was to find the best existing software and commands to perform each step. As it turns out I didn't need to use any basic computer science operations like loops or conditional. For background on syntax and optimizing strategies see (https://cran.r-project.org/doc/manuals/r-release/R-intro.html#Loops-and-conditional-execution), and see the illustrative example "Benchmark - Fibonacci sequence" in (https://stackoverflow.com/questions/42393658/lapply-vs-for-loop-performance-r). 
 
 Start by loading packages and importing data (excel downloaded from https://www.sciencedirect.com/science/article/abs/pii/S0016703722001454)
+
 Method 1) Using Excel, save data as .csv. Remove everything except column headers and data (*Note). Read as with previous data, using read_csv
 Method 2) Showcased here. Tidyverse readexcel package is new to us.
 
 ```{r}
+####written by W.J. Matthaeus 2022 for Montañez lab group coding tutorial
 setwd("~/Dropbox/R_on_git/R_Speleothem")
+#data input and manipulation
 library(tidyverse)
 library(tidymodels)
 #install.packages("readxl")
 library(readxl)
+#EDA
+# install.packages("corrplot")
+library(corrplot)
+#Time series analysis
 # install.packages('zoo')
 library(zoo)
+#PCA
 # install.packages("FactoMineR")
 # install.packages("factoextra")
 library(FactoMineR)
 library(factoextra)
+
+```
+
+
+Import data and take a look. Always look at your variables to avoid headaches later.
+
+
+```{r}
+
 #import
 hi_res <- read_excel(path = "1-s2.0-S0016703722001454-mmc1.xlsx",sheet =1 )
 #take a look
 hi_res
+
 ```
+
+
 So far looks good. Now for some QC.
 
 
 ```{r}
-colnames(hi_res) #drop 17 and 18
+
+#look at column names
+colnames(hi_res) 
+#drop 17 and 18, these are empty range in the excel table cause by the *NOTE entry
 hi_res <- hi_res %>% select(-(c(17,18)))
+#look at the column names
 colnames(hi_res)
+#i don't like the way the deltas came in, change them
 hi_res<-rename(hi_res, d18O="\u03b418O (\u2030)")
 hi_res<-rename(hi_res, d13C="\u03b413C (\u2030)")
+#these long names will wreak havoc later, change them
+hi_res<-rename(hi_res, "Br (ppm)"="Br (ppm) smoothed using 13 point Savitsky Golay filter")
+hi_res<-rename(hi_res, "OM (rgc)"="Organic matter (relative greyscale concentration)")
+hi_res<-rename(hi_res, "S (rgc)"="S (relative greyscale concentration)")
 colnames(hi_res)
-#"Al (ppm)","Ba (ppm)", "Br (ppm) smoothed using 13 point Savitsky Golay filter","Cu (ppm)",
- # "d13C","d18O", "Mg (ppm)","Organic matter (relative greyscale concentration)",
- # "P (ppm)","Pb (ppm)", "S (relative greyscale concentration)","Sr (ppm)",
- # "U (ppm)","Zn (ppm)"                   
+#better
+              
 ```
 
 Data structure (i.e., the tibble) is looking clean. Let's do some EDA (exploratory data analysis)
+I'm going to rearrange the data so it is more convenient for plotting. I'll use tidyr::pivot_longer() to convert to a 'long' format, wherein each row is a single observation (i.e., data column), rather than a group of observations (several data columns) for a single timepoint.
 
 ```{r}
+
+#you can print summar statistics for every column using
 summary(hi_res)
+
 #drop columns not used in rolling average plot, and lengthen data
+#this could also be done with a loop i.e., 
 hi_res_long <-  hi_res %>% select(!c("Al (ppm)", "Pb (ppm)", "Cu (ppm)","Zn (ppm)"))%>%
   pivot_longer(!c("DFT (mm)","Year (CE)"),names_to = "Type",values_to = "Observation") %>% group_by(Type)
+
+#take a look
+hi_res_long
 
 #make the new Type variable a factor (categorical) variable, and tell R what the order should be
 hi_res_long$Type <- factor(hi_res_long$Type, 
   levels = c("d13C","d18O",
- "Mg (ppm)","Organic matter (relative greyscale concentration)",
-  "P (ppm)","S (relative greyscale concentration)",                           
+ "Mg (ppm)","OM (rgc)",
+  "P (ppm)","S (rgc)",                           
  "Sr (ppm)","Ba (ppm)",
-  "U (ppm)","Br (ppm) smoothed using 13 point Savitsky Golay filter"))
-
-#this is the base R plotting function, fine for single variables
-plot(hi_res$`Year (CE)`)
+  "U (ppm)","Br (ppm)"))
 
 #histograms of all variables
 ggplot(data = hi_res_long)+geom_histogram(aes(x=Observation))+facet_wrap(Type~.,scales = "free")
@@ -67,53 +102,71 @@ ggplot(data = hi_res_long)+geom_histogram(aes(x=Observation))+facet_wrap(Type~.,
 #d18O and d13C scatterplot. nonequillibrium processes at play?
 ggplot(data = hi_res)+geom_point(aes(x=d18O, y=d13C))+theme_minimal()
 
-#pairwise correlations?
+#pairwise correlations?  stats::cor and corrplot::corrplot
+hi_res_corr <- hi_res %>% select(!c("DFT (mm)","Year (CE)")) %>% cor()
+corrplot(hi_res_corr, type = "lower", order = "hclust", 
+         tl.col = "black", tl.srt = 45)
+
+#since we're doing time series analysis, lets also look at the time variable
+#this is the base R plotting function, fine for single variables
+plot(hi_res$`Year (CE)`)
+
 ```
 
 
+Now following article "Past fires and post-fire impacts reconstructed from a southwest Australian stalagmite" ~ L.K. McDonough et al. 2022. overlay raw data with 5-year moving average (100 timesteps)
+
+I'll check the time intervals for irregularity using zoo::is.regular...they turn out to be irregular.
+I'll use the rollmean function from the zoo package, which is intended for use with irregular time series to calculate the rolling mean separately for each data column.
+This may not affect the outcome very much, but there's no reason not to use the best tool for the job.
+It's a good idea to look into the packages you use.
+(https://cran.r-project.org/web/packages/zoo/index.html, doi: 10.18637/jss.v014.i06)
+
+
 ```{r}
-#time series of all variables, 
-#alternative, simpler picture for first glance: geom_smooth uses gams with a basis of penalized cubic regression splines
-ggplot(data = hi_res_long)+geom_smooth(aes(x=`Year (CE)`, y=Observation))+theme_minimal()+facet_wrap(Type~.,scales = "free")
 
-#following the paper, overlay raw data (geom_lines)
-#with 5-year moving average (geom_ma)
+#alternatively, we could use stats from base R do define a filter to calculate moving average like this
+# ma <- function(x, n = 100){stats::filter(x, base::rep(1 / n, n), sides = 2)}
+#where n is the window size, rep 1/n produces an even weighting, and sides = 2 produces a centered rolling mean
+#or we could use lapply
+#the problem with this is that it is not robust to uneven time intervals
 
-#i'll use the rollmean function from the zoo package
-#alternatively, using stats from base R we could define a function to calculate moving average like this
-# ma <- function(x, n = 5){stats::filter(x, base::rep(1 / n, n), sides = 2)}
-#where n is the window size, and sides = 2 produces a centered rolling mean
-#first check to see if the time intervals are regular (from looking at the plot of time)
-plot(hi_res$d13C)
-plot(zoo::rollmean(hi_res$d13C,k = 100,fill = NA))
-plot(zoo::rollmean(zoo(x=hi_res$d13C,order.by = hi_res$`Year (CE)`),k = 100,fill = NA))
-
-is.regular(zoo(x=hi_res$`Organic matter (relative greyscale concentration)`,order.by = hi_res$`Year (CE)`))
+#directly check to see if the time series is strictly regular as proivded
 is.regular(zoo(x=hi_res$d13C,order.by = hi_res$`Year (CE)`))
 
 #three nested functions to be applied groupwise below 
 #read from inside out: store as zoo datatype, calculate rolling mean, then store as numeric vector
 my_rollmean <- function(x, na.rm=FALSE)(as.numeric(rollmean(zoo(x,order.by = hi_res$`Year (CE)`), k=100, fill = NA)))
+
 #calculate group means for each non-index column, then store like '_long' above
-hi_res_means <- hi_res %>% mutate_at(vars(-'DFT (mm)', -'Year (CE)'), my_rollmean)%>%  
-  select(!c("Al (ppm)", "Pb (ppm)", "Cu (ppm)","Zn (ppm)"))%>% 
-  pivot_longer(!c("DFT (mm)","Year (CE)"),names_to = "Type",values_to = "Observation") %>% group_by(Type)
-#
+hi_res_means <- hi_res %>% mutate_at(vars(-'DFT (mm)', -'Year (CE)'), my_rollmean)%>%  #apply custom function
+  select(!c("Al (ppm)", "Pb (ppm)", "Cu (ppm)","Zn (ppm)"))%>% #drop columns that the paper skips 
+  pivot_longer(!c("DFT (mm)","Year (CE)"),names_to = "Type",values_to = "Observation") %>% #make observations long by Type
+  group_by(Type) #tell R that the Type column is a partition of the observations
+
+#i can define an ordering for the observation types so they plot in the same order as the paper
 hi_res_means$Type <- factor(hi_res_means$Type, 
   levels = c("d13C","d18O",
- "Mg (ppm)","Organic matter (relative greyscale concentration)",
-  "P (ppm)","S (relative greyscale concentration)",                           
+ "Mg (ppm)","OM (rgc)",
+  "P (ppm)","S (rgc)",                           
  "Sr (ppm)","Ba (ppm)",
-  "U (ppm)","Br (ppm) smoothed using 13 point Savitsky Golay filter"))
+  "U (ppm)","Br (ppm)"))
 
+#build plot
 p<-ggplot()+
   #new technique here, separate but same-shaped datasets being passed to data in separate geoms
-    geom_line(data = hi_res_long,aes(x=`Year (CE)`, y=Observation, color = Type))+
-    geom_line(data = hi_res_means,aes(x=`Year (CE)`, y=Observation),color='black', linetype='dashed')+
-    theme_minimal()+facet_wrap(Type~.,scales = "free",ncol = 2)+
+    geom_line(data = hi_res_long,aes(x=`Year (CE)`, y=Observation, color = Type))+#lines for data, sometimes backticks `` must be used for non-standard variable names, in this case using regular tics '' or quotes "" would give ggplot one string ax your x
+    geom_line(data = hi_res_means,aes(x=`Year (CE)`, y=Observation),color='black', linetype='dashed')+ #lines for rollmean
+  #update formatting and break out by observation type
+    theme_minimal()+facet_wrap(Type~.,scales = "free",ncol = 2)+ 
     theme(legend.position = 'none')
+
+#view plot
 p
 #why the warning, how would we trace back the problem?
+#try changing the fill value in  my_rollmean() to -999 and replotting
+#is this really a problem?
+
 #also not so good to look at, lets save and view separately
 ggsave("raw_plus_rollmean_FireSpeleothem.png", plot = p, device = "png", 
        scale = 1, height = 8.5, width = 11, units = c("in"),
@@ -122,17 +175,52 @@ ggsave("raw_plus_rollmean_FireSpeleothem.png", plot = p, device = "png",
 
 
 ```
+
+Compare this to Figure 3 from McDonough et al 2020.
+
+Smooth transition to PCA.
+First we need to create a matrix of outcomes without independent variables (x), then we can run the PCA.
+
+(For some background, I recommend looking at https://towardsdatascience.com/a-one-stop-shop-for-principal-component-analysis-5582fb7e0a9c).
+
+The purpose of PCA is to take high-dimensional data (in this case 14 dimensions), find out what is contributing the most to the overall variation in the dataset, and plot the variation in fewer dimensions. In this case, we're going to scale the obserations using the variance (scale.unit=TRUE). This is good because we're looking at a bunch of observation types with different units (i.e., ppm & relative concentration, that are not directly comparable), with very different variances (e.g., Br and U). Try the code without scaling to see how it affects the outcome.
+
+
+
+
 ```{r}
+
+#drop 'independent variables'
 x<-subset(hi_res, select=-c(`DFT (mm)`,`Year (CE)`))
+#perform PCA with scaling
 unit<-PCA(X = x, scale.unit = TRUE)
-var<-PCA(X = x, scale.unit = FALSE)
-fviz_pca(unit)
+#...without scaling
+# var<-PCA(X = x, scale.unit = FALSE)
+#plot individual datapoints in 'timeXPC space' 
+plot(1:length(unit$ind$contrib[,1]),unit$ind$coord[,1],type = 'l', col='blue')
+plot(1:length(unit$ind$contrib[,2]),unit$ind$coord[,2],type = 'l', col='orange')
+plot(1:length(unit$ind$contrib[,3]),unit$ind$coord[,3],type = 'l', col='green')
+
+unit$eig
+unit$svd$V
+
+#biplot and cor plot are essentially the same. 
+#rotated data in biplot with arrows showing correlation of variables and axes
+#default biplot
 fviz_pca_biplot(unit)
-fviz_pca_var(unit)
+#cor plot with just variables and unit cor circle
+fviz_pca_var(unit,geom = c("point","text"))
 
-plot(1:length(unit$ind$contrib[,1]),unit$ind$coord[,1])
-plot(1:length(unit$ind$contrib[,2]),unit$ind$coord[,2])
-plot(1:length(unit$ind$contrib[,3]),unit$ind$coord[,3])
-
+#cluster variables in pc space
+#high featured package
+# unit.hcpc <- HCPC(unit, graph = FALSE)
+#following paper
+set.seed(162)
+unit.kmeans<-kmeans(unit$var$coord, centers = 3, nstart = 25)
+grps <- as.factor(unit.kmeans$cluster)
+fviz_pca_var(unit,geom = c("point","text"),col.var = grps)
+#fviz_pca_biplot(unit.hcpc$desc.axes,geom = "point",col.var = )
+#... but with a whimper...
 ```
 
+Compare the above to Fig 5 McDonough et al 2020.
