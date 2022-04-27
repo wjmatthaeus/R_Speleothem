@@ -7,14 +7,14 @@ southwest Australian stalagmite” \~ L.K. McDonough et al. 2022.
 (<https://doi-org.ezproxy.baylor.edu/10.1016/j.gca.2022.03.020>)
 
 A note on coding style. I’m showcasing ‘high-level’ scripting here, not
-in the quality sense, but in the development sense.For language like R,
-Python and Matlab it is often more time (cpu cycles) and space (memory)
-efficient to use vectorized or recursive operations than loops. It is
-expected that the developers have worked this out. For that reason, my
-M.O. in coding this was to find the best existing software and commands
-to perform each step. As it turns out I didn’t need to use any basic
-computer science operations like loops or conditional. For background on
-syntax and optimizing strategies see
+in the quality sense, but in the development sense. For languages like
+R, Python and Matlab it is often more time (cpu cycles) and space
+(memory) efficient to use vectorized or recursive operations than loops.
+It is expected that the developers have worked this out. For that
+reason, my M.O. in coding this was to find the best existing software
+and commands to perform each step. As it turns out I didn’t need to use
+any basic computer science operations like loops or conditional. For
+background on syntax and optimizing strategies see
 (<https://cran.r-project.org/doc/manuals/r-release/R-intro.html#Loops-and-conditional-execution>
 ;
 <http://rstudio-pubs-static.s3.amazonaws.com/5526_83e42f97a07141e88b75f642dbae8b1b.html>),
@@ -94,7 +94,7 @@ library(tidymodels)
     ## x dplyr::lag()      masks stats::lag()
     ## x yardstick::spec() masks readr::spec()
     ## x recipes::step()   masks stats::step()
-    ## • Use tidymodels_prefer() to resolve common conflicts.
+    ## • Search for functions across packages at https://www.tidymodels.org/find/
 
 ``` r
 #install.packages("readxl")
