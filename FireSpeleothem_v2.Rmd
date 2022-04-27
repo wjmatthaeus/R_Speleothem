@@ -6,16 +6,22 @@ editor_options:
 ---
 Following article "Past fires and post-fire impacts reconstructed from a southwest Australian stalagmite" ~ L.K. McDonough et al. 2022. (https://doi-org.ezproxy.baylor.edu/10.1016/j.gca.2022.03.020)
 
-A note on coding style. I'm showcasing 'high-level' scripting here, not in the quality sense, but in the development sense.For language like R, Python and Matlab it is often more time (cpu cycles) and space (memory) efficient to use vectorized or recursive operations than loops. It is expected that the developers have worked this out. For that reason, my M.O. in coding this was to find the best existing software and commands to perform each step. As it turns out I didn't need to use any basic computer science operations like loops or conditional. For background on syntax and optimizing strategies see (https://cran.r-project.org/doc/manuals/r-release/R-intro.html#Loops-and-conditional-execution), and see the illustrative example "Benchmark - Fibonacci sequence" in (https://stackoverflow.com/questions/42393658/lapply-vs-for-loop-performance-r). 
+A note on coding style. I'm showcasing 'high-level' scripting here, not in the quality sense, but in the development sense.For language like R, Python and Matlab it is often more time (cpu cycles) and space (memory) efficient to use vectorized or recursive operations than loops. It is expected that the developers have worked this out. For that reason, my M.O. in coding this was to find the best existing software and commands to perform each step. As it turns out I didn't need to use any basic computer science operations like loops or conditional. For background on syntax and optimizing strategies see (https://cran.r-project.org/doc/manuals/r-release/R-intro.html#Loops-and-conditional-execution ; http://rstudio-pubs-static.s3.amazonaws.com/5526_83e42f97a07141e88b75f642dbae8b1b.html), and see the illustrative example "Benchmark - Fibonacci sequence" in (https://stackoverflow.com/questions/42393658/lapply-vs-for-loop-performance-r). 
 
-Start by loading packages and importing data (excel downloaded from https://www.sciencedirect.com/science/article/abs/pii/S0016703722001454)
+Start by loading packages and importing data (excel downloaded from https://www.sciencedirect.com/science/article/abs/pii/S0016703722001454), which is also hosted on my github.
 
 Method 1) Using Excel, save data as .csv. Remove everything except column headers and data (*Note). Read as with previous data, using read_csv
 Method 2) Showcased here. Tidyverse readexcel package is new to us.
 
 ```{r}
 ####written by W.J. Matthaeus 2022 for Montañez lab group coding tutorial
+
+#the default working directory is the root directory (~),
+#set the working directory to the directory containing your code and input files
+#for PC users this will look like "C:/path/to/files"
 setwd("~/Dropbox/R_on_git/R_Speleothem")
+
+#packages for:
 #data input and manipulation
 library(tidyverse)
 library(tidymodels)
@@ -109,8 +115,10 @@ corrplot(hi_res_corr, type = "lower", order = "hclust",
 
 #since we're doing time series analysis, lets also look at the time variable
 #this is the base R plotting function, fine for single variables
+#this line should be straight if the time series is regular (just a preliminary check)
 plot(hi_res$`Year (CE)`)
-
+#for syntax reference
+# plot(hi_res$`Year (CE)`, hi_res$`DFT (mm)`,xlim = rev(range(hi_res$`Year (CE)`)))
 ```
 
 
@@ -196,13 +204,14 @@ x<-subset(hi_res, select=-c(`DFT (mm)`,`Year (CE)`))
 unit<-PCA(X = x, scale.unit = TRUE)
 #...without scaling
 # var<-PCA(X = x, scale.unit = FALSE)
+
+#check eigenvalues (importance of PCs)
+unit$eig
+
 #plot individual datapoints in 'timeXPC space' 
 plot(1:length(unit$ind$contrib[,1]),unit$ind$coord[,1],type = 'l', col='blue')
 plot(1:length(unit$ind$contrib[,2]),unit$ind$coord[,2],type = 'l', col='orange')
 plot(1:length(unit$ind$contrib[,3]),unit$ind$coord[,3],type = 'l', col='green')
-
-unit$eig
-unit$svd$V
 
 #biplot and cor plot are essentially the same. 
 #rotated data in biplot with arrows showing correlation of variables and axes
@@ -211,16 +220,23 @@ fviz_pca_biplot(unit)
 #cor plot with just variables and unit cor circle
 fviz_pca_var(unit,geom = c("point","text"))
 
-#cluster variables in pc space
-#high featured package
-# unit.hcpc <- HCPC(unit, graph = FALSE)
+
+##cluster variables in pc space
 #following paper
 set.seed(162)
 unit.kmeans<-kmeans(unit$var$coord, centers = 3, nstart = 25)
 grps <- as.factor(unit.kmeans$cluster)
 fviz_pca_var(unit,geom = c("point","text"),col.var = grps)
-#fviz_pca_biplot(unit.hcpc$desc.axes,geom = "point",col.var = )
+#compare to eigenvectors (loadings of variables on PCs)
+Eigenvectors_PC1and2<-as.data.frame(unit$svd$V[,1:2])
+colnames(Eigenvectors_PC1and2)<-c("EV1","EV2")
+rownames(Eigenvectors_PC1and2)<-colnames(x)
+Eigenvectors_PC1and2
+
 #... but with a whimper...
+#.. no!
+#bonus using high featured package
+# unit.hcpc <- HCPC(unit, nb.clust = 3, graph = TRUE)
 ```
 
 Compare the above to Fig 5 McDonough et al 2020.

@@ -15,12 +15,15 @@ M.O. in coding this was to find the best existing software and commands
 to perform each step. As it turns out I didn’t need to use any basic
 computer science operations like loops or conditional. For background on
 syntax and optimizing strategies see
-(<https://cran.r-project.org/doc/manuals/r-release/R-intro.html#Loops-and-conditional-execution>),
+(<https://cran.r-project.org/doc/manuals/r-release/R-intro.html#Loops-and-conditional-execution>
+;
+<http://rstudio-pubs-static.s3.amazonaws.com/5526_83e42f97a07141e88b75f642dbae8b1b.html>),
 and see the illustrative example “Benchmark - Fibonacci sequence” in
 (<https://stackoverflow.com/questions/42393658/lapply-vs-for-loop-performance-r>).
 
 Start by loading packages and importing data (excel downloaded from
-<https://www.sciencedirect.com/science/article/abs/pii/S0016703722001454>)
+<https://www.sciencedirect.com/science/article/abs/pii/S0016703722001454>),
+which is also hosted on my github.
 
 Method 1) Using Excel, save data as .csv. Remove everything except
 column headers and data (\*Note). Read as with previous data, using
@@ -29,7 +32,11 @@ to us.
 
 ``` r
 ####written by W.J. Matthaeus 2022 for Montañez lab group coding tutorial
+
+#the default working directory is the root directory (~),
+#set the working directory to the directory containing your code and input files 
 setwd("~/Dropbox/R_on_git/R_Speleothem")
+#packages for:
 #data input and manipulation
 library(tidyverse)
 ```
@@ -83,7 +90,7 @@ library(tidymodels)
     ## x dplyr::lag()      masks stats::lag()
     ## x yardstick::spec() masks readr::spec()
     ## x recipes::step()   masks stats::step()
-    ## • Learn how to get started at https://www.tidymodels.org/start/
+    ## • Use tidymodels_prefer() to resolve common conflicts.
 
 ``` r
 #install.packages("readxl")
@@ -332,10 +339,16 @@ corrplot(hi_res_corr, type = "lower", order = "hclust",
 ``` r
 #since we're doing time series analysis, lets also look at the time variable
 #this is the base R plotting function, fine for single variables
+#this line should be straight if the time series is regular (just a preliminary check)
 plot(hi_res$`Year (CE)`)
 ```
 
 ![](FireSpeleothem_v2_files/figure-gfm/unnamed-chunk-4-4.png)<!-- -->
+
+``` r
+#for syntax reference
+# plot(hi_res$`Year (CE)`, hi_res$`DFT (mm)`,xlim = rev(range(hi_res$`Year (CE)`)))
+```
 
 Now following article “Past fires and post-fire impacts reconstructed
 from a southwest Australian stalagmite” \~ L.K. McDonough et al. 2022.
@@ -443,25 +456,8 @@ unit<-PCA(X = x, scale.unit = TRUE)
 ``` r
 #...without scaling
 # var<-PCA(X = x, scale.unit = FALSE)
-#plot individual datapoints in 'timeXPC space' 
-plot(1:length(unit$ind$contrib[,1]),unit$ind$coord[,1],type = 'l', col='blue')
-```
 
-![](FireSpeleothem_v2_files/figure-gfm/unnamed-chunk-6-3.png)<!-- -->
-
-``` r
-plot(1:length(unit$ind$contrib[,2]),unit$ind$coord[,2],type = 'l', col='orange')
-```
-
-![](FireSpeleothem_v2_files/figure-gfm/unnamed-chunk-6-4.png)<!-- -->
-
-``` r
-plot(1:length(unit$ind$contrib[,3]),unit$ind$coord[,3],type = 'l', col='green')
-```
-
-![](FireSpeleothem_v2_files/figure-gfm/unnamed-chunk-6-5.png)<!-- -->
-
-``` r
+#check eigenvalues (importance of PCs)
 unit$eig
 ```
 
@@ -482,24 +478,23 @@ unit$eig
     ## comp 14 0.05682647              0.4059033                         100.00000
 
 ``` r
-unit$svd$V
+#plot individual datapoints in 'timeXPC space' 
+plot(1:length(unit$ind$contrib[,1]),unit$ind$coord[,1],type = 'l', col='blue')
 ```
 
-    ##               [,1]        [,2]         [,3]         [,4]         [,5]
-    ##  [1,] -0.222967499 -0.03054869  0.062466433  0.406172678  0.031216511
-    ##  [2,]  0.374653934  0.33053537 -0.118581633 -0.012616016 -0.042211729
-    ##  [3,]  0.353657382  0.31623067 -0.050102082  0.017072867 -0.101220234
-    ##  [4,]  0.387402024  0.22185525 -0.106034426 -0.002773518  0.097904685
-    ##  [5,] -0.007243393  0.23229468  0.087753689  0.385639854  0.710608360
-    ##  [6,]  0.266955657 -0.43999789 -0.021508331  0.014259712  0.234493764
-    ##  [7,]  0.428937177 -0.16454302 -0.006289153  0.063395994 -0.003026254
-    ##  [8,]  0.300392424 -0.33392659  0.161393394  0.143100731 -0.073740636
-    ##  [9,] -0.002366950  0.16819625  0.374421026  0.326997087 -0.602162651
-    ## [10,]  0.126064994  0.09494174  0.624287359 -0.136681608  0.150889400
-    ## [11,] -0.016692184  0.04790775  0.222265601  0.569303606  0.019570564
-    ## [12,] -0.031940841  0.10549285  0.572472824 -0.450533331  0.146415186
-    ## [13,]  0.276827791 -0.47577779  0.151089945  0.088417411 -0.047842203
-    ## [14,]  0.308860962  0.27813470 -0.064428325  0.025172121 -0.050375295
+![](FireSpeleothem_v2_files/figure-gfm/unnamed-chunk-6-3.png)<!-- -->
+
+``` r
+plot(1:length(unit$ind$contrib[,2]),unit$ind$coord[,2],type = 'l', col='orange')
+```
+
+![](FireSpeleothem_v2_files/figure-gfm/unnamed-chunk-6-4.png)<!-- -->
+
+``` r
+plot(1:length(unit$ind$contrib[,3]),unit$ind$coord[,3],type = 'l', col='green')
+```
+
+![](FireSpeleothem_v2_files/figure-gfm/unnamed-chunk-6-5.png)<!-- -->
 
 ``` r
 #biplot and cor plot are essentially the same. 
@@ -518,9 +513,7 @@ fviz_pca_var(unit,geom = c("point","text"))
 ![](FireSpeleothem_v2_files/figure-gfm/unnamed-chunk-6-7.png)<!-- -->
 
 ``` r
-#cluster variables in pc space
-#high featured package
-# unit.hcpc <- HCPC(unit, graph = FALSE)
+##cluster variables in pc space
 #following paper
 set.seed(162)
 unit.kmeans<-kmeans(unit$var$coord, centers = 3, nstart = 25)
@@ -531,8 +524,34 @@ fviz_pca_var(unit,geom = c("point","text"),col.var = grps)
 ![](FireSpeleothem_v2_files/figure-gfm/unnamed-chunk-6-8.png)<!-- -->
 
 ``` r
-#fviz_pca_biplot(unit.hcpc$desc.axes,geom = "point",col.var = )
+#compare to eigenvectors (loadings of variables on PCs)
+Eigenvectors_PC1and2<-as.data.frame(unit$svd$V[,1:2])
+colnames(Eigenvectors_PC1and2)<-c("EV1","EV2")
+rownames(Eigenvectors_PC1and2)<-colnames(x)
+Eigenvectors_PC1and2
+```
+
+    ##                   EV1         EV2
+    ## OM (rgc) -0.222967499 -0.03054869
+    ## d13C      0.374653934  0.33053537
+    ## d18O      0.353657382  0.31623067
+    ## Mg (ppm)  0.387402024  0.22185525
+    ## P (ppm)  -0.007243393  0.23229468
+    ## Sr (ppm)  0.266955657 -0.43999789
+    ## Ba (ppm)  0.428937177 -0.16454302
+    ## U (ppm)   0.300392424 -0.33392659
+    ## Al (ppm) -0.002366950  0.16819625
+    ## Zn (ppm)  0.126064994  0.09494174
+    ## Cu (ppm) -0.016692184  0.04790775
+    ## Pb (ppm) -0.031940841  0.10549285
+    ## S (rgc)   0.276827791 -0.47577779
+    ## Br (ppm)  0.308860962  0.27813470
+
+``` r
 #... but with a whimper...
+#.. no!
+#bonus using high featured package
+# unit.hcpc <- HCPC(unit, nb.clust = 3, graph = TRUE)
 ```
 
 Compare the above to Fig 5 McDonough et al 2020.
