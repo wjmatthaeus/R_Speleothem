@@ -33,9 +33,13 @@ to us.
 ``` r
 ####written by W.J. Matthaeus 2022 for Montañez lab group coding tutorial
 
-#the default working directory is the root directory (~),
-#set the working directory to the directory containing your code and input files 
+#the default working directory set by RStudio is the root directory
+#(on OSX root is ~ for short, and probably C: in Windsows),
+#set the working directory to the directory containing your code and input files
+#for PC users this will look like "C:/path/to/files", 
+#NOTE: the slashes are opposite direction
 setwd("~/Dropbox/R_on_git/R_Speleothem")
+
 #packages for:
 #data input and manipulation
 library(tidyverse)
