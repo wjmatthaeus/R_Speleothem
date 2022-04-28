@@ -193,36 +193,49 @@ Compare this to Figure 3 from McDonough et al 2020.
 Smooth transition to PCA.
 First we need to create a matrix of outcomes without independent variables (x), then we can run the PCA.
 
-(For some background, I recommend looking at https://towardsdatascience.com/a-one-stop-shop-for-principal-component-analysis-5582fb7e0a9c).
+(For some background, I recommend looking at [this article](https://towardsdatascience.com/a-one-stop-shop-for-principal-component-analysis-5582fb7e0a9c), which explains PCA in terms of Eigendecomposition. You might also search for explanations in terms of singular value decomposition.)
+
 
 The purpose of PCA is to take high-dimensional data (in this case 14 dimensions), find out what is contributing the most to the overall variation in the dataset, and plot the variation in fewer dimensions. In this case, we're going to scale the obserations using the variance (scale.unit=TRUE). This is good because we're looking at a bunch of observation types with different units (i.e., ppm & relative concentration, that are not directly comparable), with very different variances (e.g., Br and U). Try the code without scaling to see how it affects the outcome.
 
+Some terminology:
+Eigenvalues - think of each a a property of a principle component that tell you proportionally how important it is to explaining the variance of the original data (i.e., EV1 is the importance of PC1). 
 
+Eigenvector - is the unit vector in the direction of each PC, each value of the eigenvector is the "loading" of a va
 
 
 ```{r}
 
-#drop 'independent variables'
+#drop time variables leaving only the measurements (the article calls them 'independent variables' but this is arbitrary)
+#we're not interested in the variance of time, but only the measurements
 x<-subset(hi_res, select=-c(`DFT (mm)`,`Year (CE)`))
 #perform PCA with scaling
-unit<-PCA(X = x, scale.unit = TRUE)
+unit<-PCA(X = x, scale.unit = TRUE,graph = FALSE)
 #...without scaling
 # var<-PCA(X = x, scale.unit = FALSE)
 
 #check eigenvalues (importance of PCs)
 unit$eig
+#compare to eigenvectors (loadings of variables on PCs)
+Eigenvectors_PC1and2<-as.data.frame(unit$svd$V[,1:2])
+colnames(Eigenvectors_PC1and2)<-c("EV1","EV2")
+rownames(Eigenvectors_PC1and2)<-colnames(x)
+Eigenvectors_PC1and2
 
-#plot individual datapoints in 'timeXPC space' 
+#biplot and cor plot are essentially the same. 
+#rotated data in biplot with arrows showing correlation of variables and axes
+#cor plot with just variables and unit cor circle
+fviz_pca_var(unit,geom = c("point","text"))
+#default biplot
+fviz_pca_biplot(unit)
+
+#plot individual datapoints projected onto PCs in 'timeXPC space' 
 plot(1:length(unit$ind$contrib[,1]),unit$ind$coord[,1],type = 'l', col='blue')
 plot(1:length(unit$ind$contrib[,2]),unit$ind$coord[,2],type = 'l', col='orange')
 plot(1:length(unit$ind$contrib[,3]),unit$ind$coord[,3],type = 'l', col='green')
 
-#biplot and cor plot are essentially the same. 
-#rotated data in biplot with arrows showing correlation of variables and axes
-#default biplot
-fviz_pca_biplot(unit)
-#cor plot with just variables and unit cor circle
-fviz_pca_var(unit,geom = c("point","text"))
+
+
 
 
 ##cluster variables in pc space
@@ -231,16 +244,14 @@ set.seed(162)
 unit.kmeans<-kmeans(unit$var$coord, centers = 3, nstart = 25)
 grps <- as.factor(unit.kmeans$cluster)
 fviz_pca_var(unit,geom = c("point","text"),col.var = grps)
-#compare to eigenvectors (loadings of variables on PCs)
-Eigenvectors_PC1and2<-as.data.frame(unit$svd$V[,1:2])
-colnames(Eigenvectors_PC1and2)<-c("EV1","EV2")
-rownames(Eigenvectors_PC1and2)<-colnames(x)
-Eigenvectors_PC1and2
+
+#bonus using high featured command, run this in your console without 'nb.clust' for some real fun
+# unit.hcpc <- HCPC(unit, nb.clust = 3, graph = TRUE)
+
 
 #... but with a whimper...
-#.. no!
-#bonus using high featured package
-# unit.hcpc <- HCPC(unit, nb.clust = 3, graph = TRUE)
+
+
 ```
 
 Compare the above to Fig 5 McDonough et al 2020.

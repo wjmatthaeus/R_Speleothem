@@ -97,7 +97,7 @@ library(tidymodels)
     ## x dplyr::lag()      masks stats::lag()
     ## x yardstick::spec() masks readr::spec()
     ## x recipes::step()   masks stats::step()
-    ## • Learn how to get started at https://www.tidymodels.org/start/
+    ## • Dig deeper into tidy modeling with R at https://www.tmwr.org
 
 ``` r
 #install.packages("readxl")
@@ -438,8 +438,10 @@ Compare this to Figure 3 from McDonough et al 2020.
 Smooth transition to PCA. First we need to create a matrix of outcomes
 without independent variables (x), then we can run the PCA.
 
-(For some background, I recommend looking at
-<https://towardsdatascience.com/a-one-stop-shop-for-principal-component-analysis-5582fb7e0a9c>).
+(For some background, I recommend looking at [this
+article](https://towardsdatascience.com/a-one-stop-shop-for-principal-component-analysis-5582fb7e0a9c),
+which explains PCA in terms of Eigendecomposition. You might also search
+for explanations in terms of singular value decomposition.)
 
 The purpose of PCA is to take high-dimensional data (in this case 14
 dimensions), find out what is contributing the most to the overall
@@ -451,16 +453,20 @@ concentration, that are not directly comparable), with very different
 variances (e.g., Br and U). Try the code without scaling to see how it
 affects the outcome.
 
+Some terminology: Eigenvalues - think of each a a property of a
+principle component that tell you proportionally how important it is to
+explaining the variance of the original data (i.e., EV1 is the
+importance of PC1).
+
+Eigenvector - is the unit vector in the direction of each PC, each value
+of the eigenvector is the “loading” of a va
+
 ``` r
-#drop 'independent variables'
+#drop time variables leaving only the measurements (the article calls them 'independent variables' but this is arbitrary)
+#we're not interested in the variance of time, but only the measurements
 x<-subset(hi_res, select=-c(`DFT (mm)`,`Year (CE)`))
 #perform PCA with scaling
-unit<-PCA(X = x, scale.unit = TRUE)
-```
-
-![](FireSpeleothem_v2_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->![](FireSpeleothem_v2_files/figure-gfm/unnamed-chunk-6-2.png)<!-- -->
-
-``` r
+unit<-PCA(X = x, scale.unit = TRUE,graph = FALSE)
 #...without scaling
 # var<-PCA(X = x, scale.unit = FALSE)
 
@@ -483,52 +489,6 @@ unit$eig
     ## comp 12 0.25465705              1.8189789                          99.07436
     ## comp 13 0.07276255              0.5197325                          99.59410
     ## comp 14 0.05682647              0.4059033                         100.00000
-
-``` r
-#plot individual datapoints in 'timeXPC space' 
-plot(1:length(unit$ind$contrib[,1]),unit$ind$coord[,1],type = 'l', col='blue')
-```
-
-![](FireSpeleothem_v2_files/figure-gfm/unnamed-chunk-6-3.png)<!-- -->
-
-``` r
-plot(1:length(unit$ind$contrib[,2]),unit$ind$coord[,2],type = 'l', col='orange')
-```
-
-![](FireSpeleothem_v2_files/figure-gfm/unnamed-chunk-6-4.png)<!-- -->
-
-``` r
-plot(1:length(unit$ind$contrib[,3]),unit$ind$coord[,3],type = 'l', col='green')
-```
-
-![](FireSpeleothem_v2_files/figure-gfm/unnamed-chunk-6-5.png)<!-- -->
-
-``` r
-#biplot and cor plot are essentially the same. 
-#rotated data in biplot with arrows showing correlation of variables and axes
-#default biplot
-fviz_pca_biplot(unit)
-```
-
-![](FireSpeleothem_v2_files/figure-gfm/unnamed-chunk-6-6.png)<!-- -->
-
-``` r
-#cor plot with just variables and unit cor circle
-fviz_pca_var(unit,geom = c("point","text"))
-```
-
-![](FireSpeleothem_v2_files/figure-gfm/unnamed-chunk-6-7.png)<!-- -->
-
-``` r
-##cluster variables in pc space
-#following paper
-set.seed(162)
-unit.kmeans<-kmeans(unit$var$coord, centers = 3, nstart = 25)
-grps <- as.factor(unit.kmeans$cluster)
-fviz_pca_var(unit,geom = c("point","text"),col.var = grps)
-```
-
-![](FireSpeleothem_v2_files/figure-gfm/unnamed-chunk-6-8.png)<!-- -->
 
 ``` r
 #compare to eigenvectors (loadings of variables on PCs)
@@ -555,10 +515,57 @@ Eigenvectors_PC1and2
     ## Br (ppm)  0.308860962  0.27813470
 
 ``` r
-#... but with a whimper...
-#.. no!
-#bonus using high featured package
+#biplot and cor plot are essentially the same. 
+#rotated data in biplot with arrows showing correlation of variables and axes
+#cor plot with just variables and unit cor circle
+fviz_pca_var(unit,geom = c("point","text"))
+```
+
+![](FireSpeleothem_v2_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
+
+``` r
+#default biplot
+fviz_pca_biplot(unit)
+```
+
+![](FireSpeleothem_v2_files/figure-gfm/unnamed-chunk-6-2.png)<!-- -->
+
+``` r
+#plot individual datapoints projected onto PCs in 'timeXPC space' 
+plot(1:length(unit$ind$contrib[,1]),unit$ind$coord[,1],type = 'l', col='blue')
+```
+
+![](FireSpeleothem_v2_files/figure-gfm/unnamed-chunk-6-3.png)<!-- -->
+
+``` r
+plot(1:length(unit$ind$contrib[,2]),unit$ind$coord[,2],type = 'l', col='orange')
+```
+
+![](FireSpeleothem_v2_files/figure-gfm/unnamed-chunk-6-4.png)<!-- -->
+
+``` r
+plot(1:length(unit$ind$contrib[,3]),unit$ind$coord[,3],type = 'l', col='green')
+```
+
+![](FireSpeleothem_v2_files/figure-gfm/unnamed-chunk-6-5.png)<!-- -->
+
+``` r
+##cluster variables in pc space
+#following paper
+set.seed(162)
+unit.kmeans<-kmeans(unit$var$coord, centers = 3, nstart = 25)
+grps <- as.factor(unit.kmeans$cluster)
+fviz_pca_var(unit,geom = c("point","text"),col.var = grps)
+```
+
+![](FireSpeleothem_v2_files/figure-gfm/unnamed-chunk-6-6.png)<!-- -->
+
+``` r
+#bonus using high featured command, run this in your console without 'nb.clust' for some real fun
 # unit.hcpc <- HCPC(unit, nb.clust = 3, graph = TRUE)
+
+
+#... but with a whimper...
 ```
 
 Compare the above to Fig 5 McDonough et al 2020.
