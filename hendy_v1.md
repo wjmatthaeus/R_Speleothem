@@ -115,7 +115,7 @@ library(tidymodels)
     ## x dplyr::lag()      masks stats::lag()
     ## x yardstick::spec() masks readr::spec()
     ## x recipes::step()   masks stats::step()
-    ## • Search for functions across packages at https://www.tidymodels.org/find/
+    ## • Learn how to get started at https://www.tidymodels.org/start/
 
 ``` r
 #Read in data from delimited text file (i.e., csv)
@@ -373,6 +373,10 @@ pS <- ggplot(data = dat_long, aes(x=age, y=signature))+
   geom_smooth(method = "lm", se=FALSE, color="black")
 ```
 
+Unfortunately, and as far as I could find, its not possible to pull the
+parameters of these sub-models out of the ggplot object (pS), if you
+should figure out how let me know!!!
+
 Now let’s dive into the statistical analysis: detrend and calculate
 correlation for whole time series.
 
@@ -398,6 +402,30 @@ dat$notrend_d13C<-dat$d13C-dat$fitted_d13C
 #ggplot()+geom_line(data=dat, aes(x=age, y=notrend_d13C)) #centered on zero
 sd_d13C<-sd(dat$notrend_d13C)
 dat$z_d13C<-dat$notrend_d13C/sd_d13C
+
+#just the correlation coefficient, also takes other methods
+cor(dat$notrend_d13C,dat$notrend_d18O)
+```
+
+    ## [1] 0.6091559
+
+``` r
+#with significanc and other methods, (kendall and spearman are non-parametric, ok for non-normal data)
+cor.test(dat$notrend_d13C,dat$notrend_d18O, method="spearman")
+```
+
+    ## 
+    ##  Spearman's rank correlation rho
+    ## 
+    ## data:  dat$notrend_d13C and dat$notrend_d18O
+    ## S = 16124330, p-value < 2.2e-16
+    ## alternative hypothesis: true rho is not equal to 0
+    ## sample estimates:
+    ##       rho 
+    ## 0.5881125
+
+``` r
+#total time series isotopes are correlated
 ```
 
 It’s worth mentioning that these are not ‘vanilla’ z-scores, as they are
@@ -434,12 +462,276 @@ ggplot()+geom_histogram(data=z_dat_long, aes(x=signature, color=isotope))+
 
 ![](hendy_v1_files/figure-gfm/unnamed-chunk-9-2.png)<!-- -->
 
-Now to do it again but for each interval separately (This script is
-unfinished, if you are interested in seeing the rest of this analysis in
-R please let me know)
+Subintervals!!
+
+Now to do it again but for each interval separately Sometimes you have
+to use loops, if for no other reason than you can’t work out the
+vectorized (etc.) version. But see below the loops.
+
+I’m going to build my loop step by step to show you how I do it. First
+I’ll get the looping conditions right using a prototype and reporters.
+In addition to the for loop syntax, this will require a few of new
+functions: *paste()/paste0() are variations of a concatenation function,
+that take one or more variables, force them to string type and paste
+them together (concatenate them) *print() …. yep *length() gives the
+length of an object, different values depending on the input type (e.g.,
+for vectors gives the number of elements, but for dataframes gives the
+number of columns) *unique() gives the unique elements, usually most
+useful for vectors (again output depends on input type) but generally
+outputs a list, which is a new data structure \*
 
 ``` r
-print("i'm empty :(")
+##'by the numbers'
+#most basic loop with most basic reporter
+for (i in 1:10) {
+  print(i)
+}
 ```
 
-    ## [1] "i'm empty :("
+    ## [1] 1
+    ## [1] 2
+    ## [1] 3
+    ## [1] 4
+    ## [1] 5
+    ## [1] 6
+    ## [1] 7
+    ## [1] 8
+    ## [1] 9
+    ## [1] 10
+
+``` r
+#NOTE that when given integers the : operator is equivalent to the seq() function with 'by = 1'
+
+#but we want to iterate across the sub-intervals, how many are there?
+length(unique(dat$interval))
+```
+
+    ## [1] 7
+
+``` r
+#we can incorporate this directly into the loop, so if we add another sub-interval later, the code will still work
+for (i in 1:length(unique(dat$interval))) {
+  print(i)
+  print(unique(dat$interval)[i])
+}
+```
+
+    ## [1] 1
+    ## [1] Younger Dryas\n(11.6-12.7 ka)
+    ## 7 Levels: Younger Dryas\n(11.6-12.7 ka) ... Last Glacial Maximum\n(17.5-20 ka)
+    ## [1] 2
+    ## [1] Allerod\n(12.7-13.5 ka)
+    ## 7 Levels: Younger Dryas\n(11.6-12.7 ka) ... Last Glacial Maximum\n(17.5-20 ka)
+    ## [1] 3
+    ## [1] Older Dryas\n(13.5-14.5 ka)
+    ## 7 Levels: Younger Dryas\n(11.6-12.7 ka) ... Last Glacial Maximum\n(17.5-20 ka)
+    ## [1] 4
+    ## [1] Bolling\n(14.5-15 ka)
+    ## 7 Levels: Younger Dryas\n(11.6-12.7 ka) ... Last Glacial Maximum\n(17.5-20 ka)
+    ## [1] 5
+    ## [1] Big Wet\n(15-16.2 ka)
+    ## 7 Levels: Younger Dryas\n(11.6-12.7 ka) ... Last Glacial Maximum\n(17.5-20 ka)
+    ## [1] 6
+    ## [1] Big Dry\n(16.2-17.5 ka)
+    ## 7 Levels: Younger Dryas\n(11.6-12.7 ka) ... Last Glacial Maximum\n(17.5-20 ka)
+    ## [1] 7
+    ## [1] Last Glacial Maximum\n(17.5-20 ka)
+    ## 7 Levels: Younger Dryas\n(11.6-12.7 ka) ... Last Glacial Maximum\n(17.5-20 ka)
+
+``` r
+#to remind me of what our intervals look like (again)
+t_ints 
+```
+
+    ## [1] 11.6 12.7 13.5 14.5 15.0 16.2 17.5 20.0
+
+``` r
+t_int_names 
+```
+
+    ## [1] "Younger Dryas\n(11.6-12.7 ka)"      "Allerod\n(12.7-13.5 ka)"           
+    ## [3] "Older Dryas\n(13.5-14.5 ka)"        "Bolling\n(14.5-15 ka)"             
+    ## [5] "Big Wet\n(15-16.2 ka)"              "Big Dry\n(16.2-17.5 ka)"           
+    ## [7] "Last Glacial Maximum\n(17.5-20 ka)"
+
+``` r
+#to look at what we get by using our index on these arrays, i've added some more reporters here (there are other ways to do this besides print statements), each group should match in terms of names and numbers
+for (i in 1:length(unique(dat$interval))) {
+  print(i)
+  print(unique(paste0(dat$interval))[i])#the paste0 command forces the input to a string type, it could take multiple inputs and will concatenate them with no separator (thus the zero), i've done this to clean up the output by avoiding the reminder R gives us about the factor levels for the interval column
+  print(paste(t_ints[i],t_ints[i+1],sep = '-')) #paste converts other types to a string, the default seperator is a space, i'm using a dash so it looks exactly the same as the intervals in the corresponding name
+  print(t_int_names[i])
+}
+```
+
+    ## [1] 1
+    ## [1] "Younger Dryas\n(11.6-12.7 ka)"
+    ## [1] "11.6-12.7"
+    ## [1] "Younger Dryas\n(11.6-12.7 ka)"
+    ## [1] 2
+    ## [1] "Allerod\n(12.7-13.5 ka)"
+    ## [1] "12.7-13.5"
+    ## [1] "Allerod\n(12.7-13.5 ka)"
+    ## [1] 3
+    ## [1] "Older Dryas\n(13.5-14.5 ka)"
+    ## [1] "13.5-14.5"
+    ## [1] "Older Dryas\n(13.5-14.5 ka)"
+    ## [1] 4
+    ## [1] "Bolling\n(14.5-15 ka)"
+    ## [1] "14.5-15"
+    ## [1] "Bolling\n(14.5-15 ka)"
+    ## [1] 5
+    ## [1] "Big Wet\n(15-16.2 ka)"
+    ## [1] "15-16.2"
+    ## [1] "Big Wet\n(15-16.2 ka)"
+    ## [1] 6
+    ## [1] "Big Dry\n(16.2-17.5 ka)"
+    ## [1] "16.2-17.5"
+    ## [1] "Big Dry\n(16.2-17.5 ka)"
+    ## [1] 7
+    ## [1] "Last Glacial Maximum\n(17.5-20 ka)"
+    ## [1] "17.5-20"
+    ## [1] "Last Glacial Maximum\n(17.5-20 ka)"
+
+``` r
+#now we can use either the intervals names or the index numbers to get what we need
+```
+
+We can use these values to compare to those in our dataframe.
+
+So we’ve seen how our loop can run thru those data structures (atomic
+vectors, numeric with ages, and string with names). I’m going to use
+those to pull out sub-intervals from the main dataset. But we need to
+figure out how to subset the dataset itself using those strings or
+numbers. This is going to involve the which() function and usage of the
+\[\] index syntax.
+
+``` r
+#time to subset our dataset, the which command subsets by either numerical or logical criteria
+#it takes a 'test', and returns *indexes*
+#by the names we've already set up, test is string equality
+which(dat$interval=="Younger Dryas\n(11.6-12.7 ka)")
+```
+
+    ##  [1]  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25
+    ## [26] 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41
+
+``` r
+#by interval range requires a compound test, which is a numerical inequality
+which(dat$age>=t_ints[1] & dat$age<t_ints[2])
+```
+
+    ##  [1]  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25
+    ## [26] 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41
+
+``` r
+#brackets "[i,j]" treat the data frame like a matrix, if you leave one blank it takes everything.
+#using the which command inside the brackets will give a set of indexes to the [] and return rows or columns for just those indexes (i.e. a subset)
+
+#so lets keep all columns and only the rows for a test interval, say the first, using the name
+dat[which(dat$interval=="Younger Dryas\n(11.6-12.7 ka)"),]
+```
+
+    ## # A tibble: 41 × 12
+    ##      age depth   d13C   d18O interval      ky_t0 fitted_d18O notrend_d18O z_d18O
+    ##    <dbl> <dbl>  <dbl>  <dbl> <fct>         <dbl>       <dbl>        <dbl>  <dbl>
+    ##  1  11.7  1.21 -10.6   -9.66 "Younger Dry… -7.76       -9.72       0.0604  0.103
+    ##  2  11.7  1.26 -10.4  -10.4  "Younger Dry… -7.74       -9.72      -0.710  -1.21 
+    ##  3  11.7  1.30  -9.65  -9.90 "Younger Dry… -7.71       -9.72      -0.180  -0.306
+    ##  4  11.7  1.35  -9.99 -10.6  "Younger Dry… -7.69       -9.72      -0.860  -1.46 
+    ##  5  11.8  1.45 -10.2  -10.1  "Younger Dry… -7.63       -9.72      -0.381  -0.648
+    ##  6  11.8  1.49 -10.6  -10.0  "Younger Dry… -7.61       -9.72      -0.281  -0.479
+    ##  7  11.8  1.54 -10.5   -9.51 "Younger Dry… -7.58       -9.72       0.219   0.372
+    ##  8  11.9  1.59 -10.8  -10.3  "Younger Dry… -7.56       -9.72      -0.582  -0.990
+    ##  9  11.9  1.64  -9.91  -9.57 "Younger Dry… -7.53       -9.73       0.158   0.269
+    ## 10  11.9  1.68 -10.1  -10.1  "Younger Dry… -7.51       -9.73      -0.333  -0.567
+    ## # … with 31 more rows, and 3 more variables: fitted_d13C <dbl>,
+    ## #   notrend_d13C <dbl>, z_d13C <dbl>
+
+``` r
+#this returns a new dataframe that is a subset of the last
+
+#put the generalized version (t_int_names[i]) in a loop
+for (i in 1:length(unique(dat$interval))) {
+  #i'll use the interval names to subset 
+  temp<-dat[which(dat$interval==t_int_names[i]),]
+  print(head(temp,n = 1))#take a look ^^
+}
+```
+
+    ## # A tibble: 1 × 12
+    ##     age depth  d13C  d18O interval         ky_t0 fitted_d18O notrend_d18O z_d18O
+    ##   <dbl> <dbl> <dbl> <dbl> <fct>            <dbl>       <dbl>        <dbl>  <dbl>
+    ## 1  11.7  1.21 -10.6 -9.66 "Younger Dryas\… -7.76       -9.72       0.0604  0.103
+    ## # … with 3 more variables: fitted_d13C <dbl>, notrend_d13C <dbl>, z_d13C <dbl>
+    ## # A tibble: 1 × 12
+    ##     age depth  d13C  d18O interval         ky_t0 fitted_d18O notrend_d18O z_d18O
+    ##   <dbl> <dbl> <dbl> <dbl> <fct>            <dbl>       <dbl>        <dbl>  <dbl>
+    ## 1  12.7  3.44 -7.86 -9.82 "Allerod\n(12.7… -6.69       -9.76      -0.0620 -0.106
+    ## # … with 3 more variables: fitted_d13C <dbl>, notrend_d13C <dbl>, z_d13C <dbl>
+    ## # A tibble: 1 × 12
+    ##     age depth  d13C  d18O interval         ky_t0 fitted_d18O notrend_d18O z_d18O
+    ##   <dbl> <dbl> <dbl> <dbl> <fct>            <dbl>       <dbl>        <dbl>  <dbl>
+    ## 1  13.5  6.21 -9.94 -9.34 "Older Dryas\n(… -5.92       -9.78        0.440  0.750
+    ## # … with 3 more variables: fitted_d13C <dbl>, notrend_d13C <dbl>, z_d13C <dbl>
+    ## # A tibble: 1 × 12
+    ##     age depth  d13C  d18O interval         ky_t0 fitted_d18O notrend_d18O z_d18O
+    ##   <dbl> <dbl> <dbl> <dbl> <fct>            <dbl>       <dbl>        <dbl>  <dbl>
+    ## 1  14.5  11.0 -8.53 -9.48 "Bolling\n(14.5… -4.91       -9.82        0.339  0.578
+    ## # … with 3 more variables: fitted_d13C <dbl>, notrend_d13C <dbl>, z_d13C <dbl>
+    ## # A tibble: 1 × 12
+    ##     age depth  d13C  d18O interval         ky_t0 fitted_d18O notrend_d18O z_d18O
+    ##   <dbl> <dbl> <dbl> <dbl> <fct>            <dbl>       <dbl>        <dbl>  <dbl>
+    ## 1  15.0  12.3 -7.44 -9.36 "Big Wet\n(15-1… -4.41       -9.84        0.476  0.811
+    ## # … with 3 more variables: fitted_d13C <dbl>, notrend_d13C <dbl>, z_d13C <dbl>
+    ## # A tibble: 1 × 12
+    ##     age depth  d13C  d18O interval         ky_t0 fitted_d18O notrend_d18O z_d18O
+    ##   <dbl> <dbl> <dbl> <dbl> <fct>            <dbl>       <dbl>        <dbl>  <dbl>
+    ## 1  16.2  13.7 -8.87 -9.35 "Big Dry\n(16.2… -3.21       -9.88        0.527  0.898
+    ## # … with 3 more variables: fitted_d13C <dbl>, notrend_d13C <dbl>, z_d13C <dbl>
+    ## # A tibble: 1 × 12
+    ##     age depth  d13C  d18O interval         ky_t0 fitted_d18O notrend_d18O z_d18O
+    ##   <dbl> <dbl> <dbl> <dbl> <fct>            <dbl>       <dbl>        <dbl>  <dbl>
+    ## 1  17.5  17.5 -7.26 -9.80 "Last Glacial M… -1.92       -9.92        0.123  0.209
+    ## # … with 3 more variables: fitted_d13C <dbl>, notrend_d13C <dbl>, z_d13C <dbl>
+
+Scroll thru those to see if they match your expectations.
+
+Now lets actually do some calculations, they’ll look the same as the
+overall correlations above, but for each subinterval
+
+``` r
+for (i in 1:length(unique(dat$interval))) {
+  #i'll use the interval names to subset 
+  sub<-dat[which(dat$interval==t_int_names[i]),]
+  #perform the test on a subinterval
+  sub_test<-cor.test(sub$d13C,sub$d18O, method="pearson")
+  #the output of cor.test is a new data structure, a list, i'll talk about below
+  #but thats the reason for the new [[]] syntax
+  
+  #cat is has some features of both paste and print (and not others)
+  #they key thing is that it evalueates the escape sequences i've added (e.g.,\n for a newline)
+  # plot(sub$d13C,type = "l") #too look at plots
+  cat(paste(t_int_names[i],sub_test$estimate[[1]],sub_test$p.value,"\n", collapse = '\t'))
+}
+```
+
+    ## Younger Dryas
+    ## (11.6-12.7 ka) 0.274877509325455 0.0819777622979314 
+    ## Allerod
+    ## (12.7-13.5 ka) 0.467708824462376 1.07033265162938e-05 
+    ## Older Dryas
+    ## (13.5-14.5 ka) 0.486435099214966 1.83210452109097e-10 
+    ## Bolling
+    ## (14.5-15 ka) 0.788257503009881 2.12928311931121e-10 
+    ## Big Wet
+    ## (15-16.2 ka) 0.558027648086811 5.59166831538501e-05 
+    ## Big Dry
+    ## (16.2-17.5 ka) 0.544954071386326 1.29057292947572e-09 
+    ## Last Glacial Maximum
+    ## (17.5-20 ka) 0.563408283012058 1.61452096989132e-13
+
+It looks like there are a couple of main culprits in our correlation
+because I didn’t de-trend each separately (yet) (This script is
+unfinished, if you are interested in seeing the rest of this analysis in
+R please let me know)
