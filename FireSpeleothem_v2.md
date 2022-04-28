@@ -4,7 +4,7 @@ post-fire impacts reconstructed \[from\] stalagmite - R Notebook
 
 Following article “Past fires and post-fire impacts reconstructed from a
 southwest Australian stalagmite” \~ L.K. McDonough et al. 2022.
-(<https://doi-org.ezproxy.baylor.edu/10.1016/j.gca.2022.03.020>)
+(doi-org.ezproxy.baylor.edu/10.1016/j.gca.2022.03.020)
 
 A note on coding style. I’m showcasing ‘high-level’ scripting here, not
 in the quality sense, but in the development sense. For languages like
@@ -15,11 +15,11 @@ reason, my M.O. in coding this was to find the best existing software
 and commands to perform each step. As it turns out I didn’t need to use
 any basic computer science operations like loops or conditional. For
 background on syntax and optimizing strategies see
-(<https://cran.r-project.org/doc/manuals/r-release/R-intro.html#Loops-and-conditional-execution>
+cran.r-project.org/doc/manuals/r-release/R-intro.html\#Loops-and-conditional-execution
 ;
-<http://rstudio-pubs-static.s3.amazonaws.com/5526_83e42f97a07141e88b75f642dbae8b1b.html>),
+rstudio-pubs-static.s3.amazonaws.com/5526\_83e42f97a07141e88b75f642dbae8b1b.html),
 and see the illustrative example “Benchmark - Fibonacci sequence” in
-(<https://stackoverflow.com/questions/42393658/lapply-vs-for-loop-performance-r>).
+(stackoverflow.com/questions/42393658/lapply-vs-for-loop-performance-r).
 
 Start by loading packages and importing data (excel downloaded from
 <https://www.sciencedirect.com/science/article/abs/pii/S0016703722001454>),
@@ -27,8 +27,8 @@ which is also hosted on my github.
 
 Method 1) Using Excel, save data as .csv. Remove everything except
 column headers and data (\*Note). Read as with previous data, using
-read\_csv Method 2) Showcased here. Tidyverse readexcel package is new
-to us.
+read\_csv (github.com/wjmatthaeus/R\_Speleothem/blob/main/hendy\_v1.md)
+Method 2) Showcased here. Tidyverse readexcel package is new to us.
 
 ``` r
 ####written by W.J. Matthaeus 2022 for Montañez lab group coding tutorial
